@@ -57,3 +57,47 @@ armory
 gunners
 hatfield
 clops
+clarence
+roots
+jordan
+turks
+market
+st giles
+st peters
+magpie
+swallow
+finch
+warbler
+sparrow
+oriel
+new
+college
+inn
+park
+parks
+rose
+thistle
+high
+castle
+fisher
+bulwarks
+cornmarket
+victoria
+green
+manor
+The
+Grange
+windsor
+highfield
+york
+springfield
+st john's
+albert
+north
+mill
+stanley
+chester
+richmond
+grove
+school
+

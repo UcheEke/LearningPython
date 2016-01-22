@@ -1,3 +1,19 @@
+"""
+db_populate.py
+
+Uses very basic web scraping and file stripping to populate a
+database of names and addresses. MongoDB is used as the NoSQL/document database
+
+db = customers
+collections:
+
+firstnames - a collection of popular male and female first names (from the US)
+surnames - a collection of the 2000 most common US surnames (c.2003)
+towns - a listing of towns against counties in the UK
+
+all collections are indexed to allow for a random selection algorithm
+"""
+
 from urllib.request import urlopen, Request
 from urllib.error import HTTPError, URLError
 from bs4 import BeautifulSoup
@@ -19,6 +35,7 @@ def openURL(url):
 
 
 # An example of web scraping
+# targets various tables from the website "http://names.mongabay.com/"
 def processNamesPage(url, tableName):
     headers = dict()
     headers['User-Agent'] = "Mozilla/5.0 (X11; Linux i686)"
@@ -39,7 +56,8 @@ def processNamesPage(url, tableName):
     return names
 
 
-# An example of a stripped webpage
+# An example of a stripped webpage: target page produced alt page if scraping was attempted
+# so this works directly on a local copy of the source code
 def processTownPages():
     townCounty = []
     count = 0
@@ -52,8 +70,6 @@ def processTownPages():
                 town, county = line.split('</td><td>')
                 townCounty.append((count, town, county))
     return townCounty
-
-
 
 if __name__ == '__main__':
     # Web scraping
@@ -72,6 +88,7 @@ if __name__ == '__main__':
     firstnames = enumerate(firstnames, 1)
     townCounty = processTownPages()
 
+    # Populating the database
     print("Connecting to mongoDB...")
 
     with mgo.MongoClient('mongodb://localhost:27017/') as client:
@@ -83,7 +100,7 @@ if __name__ == '__main__':
         fname.insert_many([{"name": name, "number" : count} for count, name in firstnames])
         print("Inserting surname data into 'customers.surnames'...")
         sname.insert_many([{"lastname": name, "number": count} for count, name in surnames])
-        print("Inserting town data into 'customers.towns")
+        print("Inserting town/county data into 'customers.towns'...")
         tcount.insert_many([{"number": number, "town": town, "county": county} for number, town, county in townCounty])
         print("Closing client connection")
 
