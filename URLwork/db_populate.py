@@ -2,12 +2,13 @@
 db_populate.py
 
 Uses very basic web scraping and file stripping to populate a
-database of names and addresses. MongoDB is used as the NoSQL/document database
+database of names and addresses. MongoDB is used as the NoSQL/document database foundation
 
 db = customers
+
 collections:
 
-firstnames - a collection of popular male and female first names (from the US)
+first_names - a collection of popular male and female first names (from the US)
 surnames - a collection of the 2000 most common US surnames (c.2003)
 towns - a listing of towns against counties in the UK
 
@@ -21,14 +22,14 @@ import pymongo as mgo
 
 
 # Create a wrapper function for urlopen
-def openURL(url):
+def open_url(target_url):
     try:
-        page = urlopen(url)
+        page = urlopen(target_url)
     except HTTPError as err:
-        print("openURL:", err)
+        print("open_url:", err)
         return None
     except URLError as err:
-        print("The url '{}' could not be found.", err)
+        print("open_url: The url '{}' could not be found.".format(target_url), err)
         return None
     else:
         return page
@@ -36,16 +37,16 @@ def openURL(url):
 
 # An example of web scraping
 # targets various tables from the website "http://names.mongabay.com/"
-def processNamesPage(url, tableName):
+def process_name_pages(target_url, table_name):
     headers = dict()
     headers['User-Agent'] = "Mozilla/5.0 (X11; Linux i686)"
     req = Request(url, headers=headers)
-    print("Requesting data from URL:'{}'".format(url))
-    http = openURL(req)
+    print("Requesting data from URL:'{}'".format(target_url))
+    http = open_url(req)
     page = BeautifulSoup(http, 'lxml')
 
     names = []
-    for tr in page.find('table', {"id": tableName}).tr.next_siblings:
+    for tr in page.find('table', {"id": table_name}).tr.next_siblings:
         for element in tr:
             if not isinstance(element, str):
                 name = str(element)
@@ -56,10 +57,10 @@ def processNamesPage(url, tableName):
     return names
 
 
-# An example of a stripped webpage: target page produced alt page if scraping was attempted
+# An example of a stripped web page: target page produced alt page if scraping was attempted
 # so this works directly on a local copy of the source code
-def processTownPages():
-    townCounty = []
+def process_town_pages():
+    towncounty = []
     count = 0
     with open('towncounty.html', 'r') as fd:
         for line in fd:
@@ -68,25 +69,25 @@ def processTownPages():
                 line = line.strip()
                 line = line[len('<tr><td class="r">'):-(len('</td></tr>'))]
                 town, county = line.split('</td><td>')
-                townCounty.append((count, town, county))
-    return townCounty
+                towncounty.append((count, town, county))
+    return towncounty
 
 if __name__ == '__main__':
     # Web scraping
     url = "http://names.mongabay.com/data/1000.html"
-    surnames1 = processNamesPage(url, "myTable")
+    surnames1 = process_name_pages(url, "myTable")
     url = "http://names.mongabay.com/data/2000.html"
-    surnames2 = processNamesPage(url, "myTable")
+    surnames2 = process_name_pages(url, "myTable")
     surnames = surnames1 + surnames2
     surnames = enumerate(surnames, 1)
     url = "http://names.mongabay.com/male_names_alpha.htm"
-    male_firstnames = processNamesPage(url, "table1")
+    male_first_names = process_name_pages(url, "table1")
     url = "http://names.mongabay.com/female_names_alpha.htm"
-    female_firstnames = processNamesPage(url, "table1")
-    firstnames = male_firstnames + female_firstnames
-    firstnames.sort()
-    firstnames = enumerate(firstnames, 1)
-    townCounty = processTownPages()
+    female_first_names = process_name_pages(url, "table1")
+    first_names = male_first_names + female_first_names
+    first_names.sort()
+    first_names = enumerate(first_names, 1)
+    town_county = process_town_pages()
 
     # Populating the database
     print("Connecting to mongoDB...")
@@ -96,11 +97,10 @@ if __name__ == '__main__':
         fname = db.create_collection('firstnames')
         sname = db.create_collection('surnames')
         tcount = db.create_collection('towns')
-        print("Inserting firstname data into 'customers.firstnames'...")
-        fname.insert_many([{"name": name, "number" : count} for count, name in firstnames])
+        print("Inserting first name data into 'customers.firstnames'...")
+        fname.insert_many([{"name": name, "number": count} for count, name in first_names])
         print("Inserting surname data into 'customers.surnames'...")
         sname.insert_many([{"lastname": name, "number": count} for count, name in surnames])
         print("Inserting town/county data into 'customers.towns'...")
-        tcount.insert_many([{"number": number, "town": town, "county": county} for number, town, county in townCounty])
+        tcount.insert_many([{"number": number, "town": town, "county": county} for number, town, county in town_county])
         print("Closing client connection")
-
