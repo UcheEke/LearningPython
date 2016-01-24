@@ -1,6 +1,5 @@
 """
 data_generator.py
-
 functions to create random (US) names and (UK) addresses for mock contact lists of any size
 """
 
@@ -11,7 +10,6 @@ from random import randint, seed, choice
 def generate_names(size=100):
     """
     generate_names creates a list of length size of random names from a database of popular first and last names
-
     :param size:  Number of names desired, int
     :return: list of (last_name, first_name, email) tuples of string
     """
@@ -21,7 +19,7 @@ def generate_names(size=100):
     connection = "mongodb://{}:{}/".format(host, port)
 
     with mgo.MongoClient(connection) as client:
-        db = client["customers"]
+        db = client["random_names"]
         fname = db['first_names']
         sname = db['surnames']
         for i in range(size):
@@ -39,7 +37,6 @@ def generate_names(size=100):
 
 def create_phone_numbers(town=''):
     """ create_phone_numbers: generates a mock UK style phone number
-
     :param town: for upgrade - may involve real area codes, string
     :return: home and mobile number as 2-tuple of string
     """
@@ -57,7 +54,6 @@ def create_phone_numbers(town=''):
 
 def create_email(first_name, last_name):
     """ create_email: generates a mock email address given the user's first and last names
-
     :param first_name: user's first name, string
     :param last_name: user's last name, string
     :return: email address, string
@@ -81,12 +77,11 @@ def create_email(first_name, last_name):
 
 
 def generate_street_name_from_town(collection):
-    ''' generate_street_name_from_town works with any mongoDB collection with a 'town' field
+    """ generate_street_name_from_town works with any mongoDB collection with a 'town' field
     and produces a street name from single word towns only
-
     :param collection: mongoDB collection cursor with 'town' field
     :return: suitable town name (based on filtering criteria), string
-    '''
+    """
 
     size = collection.count()
     seed()
@@ -97,16 +92,14 @@ def generate_street_name_from_town(collection):
         if len(town.split('-')) > 1:
             continue
         elif len(town.split(' ')) > 1:
-            continue
+            return town[0]
         else:
             return town
 
 
 def generate_addresses(size=100):
     """ generate_addresses: Creates a list of mock UK address of length size
-
     a rudimentary weighting algorithm is used to generated apartment numbers and street names
-
     :param size: desired number of addresses to create, int
     :return: a list of size mock UK addresses, strings
     """
@@ -117,7 +110,7 @@ def generate_addresses(size=100):
     alphabet = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ'
 
     # Nouns commonly associated with UK street names are contained in the file 'streetnouns.txt'
-    with open('streetnouns.txt', 'r') as fd:
+    with open('street_nouns.txt', 'r') as fd:
         for line in fd:
             line = line.strip().capitalize()
             street_nouns.append(line)
@@ -127,8 +120,8 @@ def generate_addresses(size=100):
     connection = "mongodb://{}:{}/".format(host, port)
 
     with mgo.MongoClient(connection) as client:
-        db = client["customers"]
-        towns = db['towns']
+        db = client["uk_towns"]
+        towns = db['town_and_county']
 
         for i in range(size):
             flatsfx = {'high': flat_suffix[0], 'low': str(choice(flat_suffix[1:]))}
@@ -141,13 +134,7 @@ def generate_addresses(size=100):
             street = "{} {}".format(choice(street_nouns) if randint(1, 100) < 50 else
                                     generate_street_name_from_town(towns),
                                     choice(street_suffix))
-            # randomly select a town from the database
-            seed()
-            number = randint(1, towns.count())
-            town_county = towns.find_one({'number': number})
-            town = town_county['town']
-            county = town_county['county']
-            seed()
+
             # generate the fake postcode
             postcode = "{}{} {}{}".format(town[:2].upper(), str(randint(1, 20)), str(randint(1, 9)), choice(alphabet) + choice(alphabet))
             home, mobile = create_phone_numbers(town)
@@ -156,26 +143,21 @@ def generate_addresses(size=100):
 if __name__ == '__main__':
     # We'll create a client_details database and populate is with documents with the following schema
     # first_name, last_name, Address(House, Street,Town,County,Postcode),Email, Phone(Home, Mobile)
-
     # Generate a population of names and contact details
     population = 200
 
     # Create generators for efficiency
     names = generate_names(population)
     details = generate_addresses(population)
-
     hostname = 'localhost'
     port = '27017'
     connection = "mongodb://{}:{}/".format(hostname, port)
-
     print("connecting to {}...".format(connection))
 
     with mgo.MongoClient(connection) as dbclient:
-        db = dbclient['client_details']
+        db = dbclient['customers']
         print("dropping existing collection...")
-
         db.drop_collection('contact_info')
-
         print("Adding new contact details to database...")
         for i in range(population):
             first_name, last_name, email = next(names)
@@ -193,4 +175,3 @@ if __name__ == '__main__':
                                            "home": home,
                                            "mobile": mobile
                                        }})
-

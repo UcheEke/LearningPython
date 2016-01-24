@@ -1,13 +1,10 @@
 """
 db_populate.py
-
 Uses very basic web scraping and file stripping to populate a
 database of names and addresses. MongoDB is used as the NoSQL/document database foundation
-
 db = customers
 
 collections:
-
 first_names - a collection of popular male and female first names (from the US)
 surnames - a collection of the 2000 most common US surnames (c.2003)
 towns - a listing of towns against counties in the UK
@@ -81,9 +78,9 @@ if __name__ == '__main__':
     surnames = surnames1 + surnames2
     surnames = enumerate(surnames, 1)
     url = "http://names.mongabay.com/male_names_alpha.htm"
-    male_first_names = process_name_pages(url, "table1")
+    male_first_names = process_name_pages(url, "myTable")
     url = "http://names.mongabay.com/female_names_alpha.htm"
-    female_first_names = process_name_pages(url, "table1")
+    female_first_names = process_name_pages(url, "myTable")
     first_names = male_first_names + female_first_names
     first_names.sort()
     first_names = enumerate(first_names, 1)
@@ -93,14 +90,17 @@ if __name__ == '__main__':
     print("Connecting to mongoDB...")
 
     with mgo.MongoClient('mongodb://localhost:27017/') as client:
-        db = client['customers']
-        fname = db.create_collection('firstnames')
+        db = client['random_names']
+        fname = db.create_collection('first_names')
         sname = db.create_collection('surnames')
-        tcount = db.create_collection('towns')
-        print("Inserting first name data into 'customers.firstnames'...")
+        print("Inserting first name data into 'random_names.first_names'...")
         fname.insert_many([{"name": name, "number": count} for count, name in first_names])
-        print("Inserting surname data into 'customers.surnames'...")
-        sname.insert_many([{"lastname": name, "number": count} for count, name in surnames])
-        print("Inserting town/county data into 'customers.towns'...")
+        print("Inserting surname data into 'random_names.surnames'...")
+        sname.insert_many([{"last_name": name, "number": count} for count, name in surnames])
+
+        # Change the cursor target
+        db = client['uk_towns']
+        print("Inserting town/county data into 'uk.towns.town_and_county'...")
+        tcount = db.create_collection('town_and_county')
         tcount.insert_many([{"number": number, "town": town, "county": county} for number, town, county in town_county])
         print("Closing client connection")
